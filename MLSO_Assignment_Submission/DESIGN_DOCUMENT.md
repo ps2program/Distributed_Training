@@ -54,36 +54,36 @@ Our solution implements **Data Parallelism** as the primary strategy for distrib
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DISTRIBUTED MLP TRAINING SYSTEM                     │
+│                        DISTRIBUTED MLP TRAINING SYSTEM                      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           MASTER PROCESS (Rank 0)                         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐ │
-│  │   Data Loading  │  │  Model Creation │  │     Results Aggregation    │ │
-│  │   & Preprocessing│  │   & DDP Wrapper │  │     & Visualization        │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────────────────┘ │
+│                           MASTER PROCESS (Rank 0)                           │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
+│  │   Data Loading  │  │  Model Creation │  │     Results Aggregation     │  │
+│  │  & Preprocessing│  │   & DDP Wrapper │  │     & Visualization         │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        PROCESS GROUP COMMUNICATION                         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐ │
-│  │   Gloo Backend  │  │  Gradient Sync  │  │   Parameter Broadcasting    │ │
-│  │   (CPU-based)   │  │   (all_reduce)  │  │     (broadcast)            │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────────────────┘ │
+│                        PROCESS GROUP COMMUNICATION                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
+│  │   Gloo Backend  │  │  Gradient Sync  │  │   Parameter Broadcasting    │  │
+│  │   (CPU-based)   │  │   (all_reduce)  │  │     (broadcast)             │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           WORKER PROCESSES                                │
+│                           WORKER PROCESSES                                  │
 │                                                                             │
 │  ┌─────────────────────────────────┐    ┌─────────────────────────────────┐ │
 │  │         WORKER 0 (Rank 0)       │    │         WORKER 1 (Rank 1)       │ │
 │  │  ┌─────────────────────────────┐│    │  ┌─────────────────────────────┐│ │
 │  │  │      Data Partition 0       ││    │  │      Data Partition 1       ││ │
-│  │  │   (Batches 0, 2, 4, ...)   ││    │  │   (Batches 1, 3, 5, ...)   ││ │
+│  │  │   (Batches 0, 2, 4, ...)    ││    │  │   (Batches 1, 3, 5, ...)    ││ │
 │  │  └─────────────────────────────┘│    │  └─────────────────────────────┘│ │
 │  │  ┌─────────────────────────────┐│    │  ┌─────────────────────────────┐│ │
 │  │  │      MLP Model Copy         ││    │  │      MLP Model Copy         ││ │
@@ -102,51 +102,51 @@ Our solution implements **Data Parallelism** as the primary strategy for distrib
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           EXECUTION FLOW                                  │
+│                           EXECUTION FLOW                                    │
 │                                                                             │
-│  1. Data Distribution    →  2. Forward Pass    →  3. Loss Computation     │
-│     (DistributedSampler)     (Parallel)           (Local)                 │
+│  1. Data Distribution    →  2. Forward Pass    →  3. Loss Computation       │
+│     (DistributedSampler)     (Parallel)           (Local)                   │
 │                                                                             │
-│  6. Parameter Update     ←  5. Gradient Sync    ←  4. Backward Pass       │
-│     (Broadcast)             (all_reduce)          (Parallel)               │
+│  6. Parameter Update     ←  5. Gradient Sync    ←  4. Backward Pass         │
+│     (Broadcast)             (all_reduce)          (Parallel)                │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Data Flow Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   MNIST Dataset │    │  Data Preprocessing │  │  Distributed   │
+┌─────────────────┐    ┌─────────────────┐     ┌─────────────────┐
+│   MNIST Dataset │    │  Data Preprocessing   │  │  Distributed   │
 │   (60K Train)   │───▶│  (Normalization)  │──▶│  Data Sampler   │
 │   (10K Test)    │    │  (Augmentation)   │   │  (Partition)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+└─────────────────┘    └─────────────────┘     └─────────────────┘
                                                        │
                                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    WORKER PROCESS EXECUTION                            │
+│                    WORKER PROCESS EXECUTION                             │
 │                                                                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   Input     │  │   MLP      │  │   Loss      │  │   Gradient  │   │
-│  │   Batch     │──▶│  Forward   │──▶│   Compute  │──▶│   Compute  │   │
-│  │   (32x784)  │  │   Pass     │  │   (CE)      │  │   (Backprop)│   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │   Input     │  │   MLP       │  │   Loss      │  │   Gradient  │     │
+│  │   Batch     │──▶│  Forward   │──▶│   Compute  │──▶│   Compute  │     │
+│  │   (32x784)  │  │   Pass     │  │   (CE)       │  │   (Backprop)│     │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │
 │                                                                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   Gradient  │  │   Parameter │  │   Validation│  │   Metrics   │   │
-│  │   Sync      │◀─│   Update    │◀─│   (Eval)    │◀─│   Logging   │   │
-│  │(all_reduce) │  │(Optimizer)  │  │   (Inference)│  │(Loss/Acc)   │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │   Gradient  │  │   Parameter │  │   Validation│  │   Metrics   │     │
+│  │   Sync      │◀─│   Update    │◀─│   (Eval)    │◀─│   Logging   │     │
+│  │(all_reduce) │  │(Optimizer)  │  │  (Inference)│  │(Loss/Acc)   │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │
 └─────────────────────────────────────────────────────────────────────────┘
                                                        │
                                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        RESULTS AGGREGATION                             │
+│                        RESULTS AGGREGATION                              │
 │                                                                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   Training  │  │   Validation│  │   Timing    │  │   Plot      │   │
-│  │   Metrics   │  │   Metrics   │  │   Analysis  │  │   Generation│   │
-│  │   (Loss/Acc)│  │   (Loss/Acc)│  │   (Per-epoch)│  │   (Charts)  │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │   Training  │  │   Validation│  │   Timing    │  │   Plot      │     │
+│  │   Metrics   │  │   Metrics   │  │   Analysis  │  │   Generation│     │
+│  │   (Loss/Acc)│  │   (Loss/Acc)│  │   (Per-epoch)│  │   (Charts)  │    │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
