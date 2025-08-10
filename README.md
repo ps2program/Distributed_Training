@@ -15,7 +15,7 @@ This repository contains the complete implementation and documentation for **Pro
 ## 📁 Repository Structure
 
 ```
-ml_sys_assig1/
+Distributed_Training/
 ├── MLSO_Assignment_Submission/          # Complete submission package
 │   ├── mlp_mnist_ddp_working.py        # Main implementation
 │   ├── DESIGN_DOCUMENT.md               # Comprehensive design document
@@ -66,8 +66,8 @@ The implementation follows a **master-worker pattern** with distributed data par
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
-   cd ml_sys_assig1
+   git clone https://github.com/ps2program/Distributed_Training.git
+   cd Distributed_Training
    ```
 
 2. **Set up virtual environment**:
