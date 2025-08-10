@@ -4,7 +4,7 @@
 
 This repository contains the complete implementation and documentation for **Problem Statement 4: Distributed Mini-Batch Neural Network Training with PyTorch and DDP** from the Machine Learning Systems and Optimization course.
 
-![Distributed ML Flow](distributed.svg)
+![Distributed ML Flow](Distributed_ml_flow.svg)
 
 ## 🚀 Key Features
 

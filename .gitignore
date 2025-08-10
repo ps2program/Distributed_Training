@@ -55,7 +55,7 @@ results/
 *.jpg
 *.jpeg
 *.gif
-*.svg
+# *.svg
 *.pdf
 *.log
 
